@@ -301,9 +301,13 @@ def updateClassWork(id):
 @app.route('/classwork/delete/<int:id>', methods=["DELETE"]) #delete 1 classwork
 def deleteClassWork(id):
     #read-write data classwork
-    classesWorkData = getClassWorkId(id).json
+    classesWorkData = getClassWork().json
     
-    del classesWorkData
+    for classWork in range(len(classesWorkData)):
+        if id == classesWorkData[classWork]["workid"]:
+            del classesWorkData[classWork]
+            break
+        return "Error. Classwork sudah tidak ada!"
 
     #write data classwork
     classesWorkFile = writeFile('./classwork-file.json', classesWorkData)
