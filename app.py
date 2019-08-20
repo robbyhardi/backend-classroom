@@ -415,7 +415,6 @@ def deleteClassWork(id):
 
     return jsonify(response)
 
-
 @app.route('/joinClass', methods=["POST"]) #join class student
 def joinClass():
     body = request.json
@@ -428,7 +427,7 @@ def joinClass():
             if (body["userid"] not in class_["students"]) and (body["userid"] not in class_["teachers"]):
                 class_["students"].append(body["userid"])
     
-    classesFile = writeFile(classesFileLocation, classesData)
+    writeFile(classesFileLocation, classesData)
 
     #nambahin classid ke users-file
     usersData = readFile(usersFileLocation)
@@ -438,9 +437,13 @@ def joinClass():
             if (body["classid"] not in user["classes_as_student"]) and (body["classid"] not in user["classes_as_teacher"]):
                 user["classes_as_student"].append(body["classid"])
     
-    usersFile = writeFile(usersFileLocation, usersData)
+    writeFile(usersFileLocation, usersData)
 
-    return "Success"
+    response = {}
+    response["message"] = "User {} joined to {} class".format(body["userid"], body["classid"])
+    response["data"] = body
+
+    return jsonify(response)
 
 @app.route('/joinClassTeacher', methods=["POST"]) #join class teacher
 def joinClassTeacher():
