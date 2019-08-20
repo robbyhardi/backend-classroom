@@ -186,7 +186,7 @@ def createClass():
         #baca file users
         usersData = readFile(usersFileLocation)
         for user in usersData:
-            if user["userid"] == body["teacher"]:
+            if user["userid"] == body["teachers"]:
                 user["classes_as_teacher"].append(body["classid"])
     
         #tambah classid ke file users
@@ -243,20 +243,26 @@ def updateClassId(id):
 
 @app.route('/deleteClass/<int:id>', methods=['DELETE']) #delete 1 class
 def deleteClass(id):
+    response = {}
+    response["message"] = "Error. Kelas sudah tidak ada!"
+    response["data"] = []
+
     #read data class
-    classesData = classList().json
+    classesData = readFile(classesFileLocation)
 
     for class_ in range(len(classesData)):
         if id == classesData[class_]["classid"]:
+            response["message"] = "Class {} deleted successfully!".format(id)
+            response["data"] = classesData[class_]
             del classesData[class_]
             break
-        return "Error. Kelas sudah tidak ada!"
+        # return "Error. Kelas sudah tidak ada!"
     
     #write data class
-    classesFile = writeFile(classesFileLocation, classesData)
+    writeFile(classesFileLocation, classesData)
     
     #read data classwork
-    classesWorkData = getClassWork().json
+    classesWorkData = readFile(classesWorkFileLocation)
 
     for classWork in range(len(classesWorkData)):
         if id == classesWorkData[classWork]["class"]:
@@ -264,10 +270,10 @@ def deleteClass(id):
             break
 
     #write data classWork
-    classesWorkFile = writeFile(classesWorkFileLocation, classesWorkData)
+    writeFile(classesWorkFileLocation, classesWorkData)
 
     #read data user
-    usersData = getUser().json
+    usersData = readFile(usersFileLocation)
 
     for user in usersData:
         if id in user["classes_as_student"]:
@@ -275,57 +281,9 @@ def deleteClass(id):
             break
 
     #write data users
-    usersFile = writeFile(usersFileLocation, usersData)
+    writeFile(usersFileLocation, usersData)
 
-    return "Kelas Berhasil Dihapus!"
-
-
-    # response = {}
-    # response["message"] = "Error. Kelas sudah tidak ada!"
-    # response["data"] = []
-
-    #             # response["message"] = "Class {} deleted successfully!".format(class_["classid"])
-    #         # response["data"] = classesData[class_]
-
-    # #read data class
-    # classesData = classList().json
-
-    # # nyari class ada atau tidak
-    # for class_ in range(len(classesData)):
-    #     if id == classesData[class_]["classid"]:
-    #         del classesData[class_]
-    #         break
-    #     # return jsonify(response)
-    #     # return "Kelas sudah tidak ada"
-    
-    # #write data class
-    # writeFile(classesFileLocation, classesData)
-    
-    # #read data classwork
-    # classesWorkData = getClassWork().json
-
-    # # nyari class di classwork
-    # for classWork in range(len(classesWorkData)):
-    #     if id == classesWorkData[classWork]["class"]:
-    #         del classesWorkData[classWork]
-    #         break
-
-    # #write data classWork
-    # writeFile(classesWorkFileLocation, classesWorkData)
-
-    # #read data user
-    # usersData = getUser().json
-
-    # # nyari class di user
-    # for user in usersData:
-    #     if id in user["classes_as_student"]:
-    #         user["classes_as_student"].remove(id)
-    #         break
-
-    # #write data users
-    # usersFile = writeFile(usersFileLocation, usersData)
-
-    # return jsonify(response)
+    return jsonify(response)
 
 @app.route('/classwork/create', methods=["POST"]) #create classwork
 def createClassWork():
