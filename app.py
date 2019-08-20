@@ -289,23 +289,30 @@ def deleteClass(id):
 def createClassWork():
     body = request.json
 
-    classWorkData = readFile(classesWorkFileLocation)
+    response = {}
+    response["message"] = "{} is wrong class id!".format(body["class"])
+    response["data"] = []
+   
     
-    classWorkData.append(body)
-
-    classWorkFile = writeFile(classesWorkFileLocation, classWorkData)
-
     #read data
+    classWorkData = readFile(classesWorkFileLocation)
     classesData = classList().json
 
     for class_ in classesData:
         if class_["classid"] == body["class"]:
             class_["classwork"].append(body["workid"])
+            classWorkData.append(body)
 
-    #write data
-    classesFile = writeFile(classesFileLocation, classesData)
 
-    return jsonify(body)
+            response["message"] = "Classwork {} created successfully!".format(body["workid"])
+            response["data"] = body
+
+
+            #write data
+            writeFile(classesWorkFileLocation, classWorkData)
+            writeFile(classesFileLocation, classesData)
+
+    return jsonify(response)
 
 @app.route('/classworklist', methods=["GET"]) #get all classwork
 def getClassWork():
