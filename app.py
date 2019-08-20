@@ -323,25 +323,31 @@ def getClassWork():
 
 @app.route('/classwork/<int:id>', methods=["GET"]) #get 1 classwork
 def getClassWorkId(id):
+    response = {}
+    response["message"] = "Classwork not found"
+    response["data"] = []
+
     #siapin file buat di read
     classWorkData = readFile(classesWorkFileLocation)
 
     for classwork in classWorkData:
         if id == classwork["workid"]:
-            return jsonify(classwork) 
+            response["message"] = "Classwork {} found successfully!".format(classwork["workid"])
+            response["data"] = classwork
+            return jsonify(response) 
         else:
             pass
-    return "Class not found"
+    return jsonify(response)
 
 @app.route('/classwork/assign/<int:id>', methods=["POST"]) #assign classwork
 def assignClassWork(id):
     body = request.json
 
     #siapin data classwork
-    classWorkData = getClassWork().json
+    classWorkData = readFile(classesWorkFileLocation)
 
     #siapin data user
-    usersData = getUser().json
+    usersData = readFile(usersFileLocation)
 
     for classwork in classWorkData:
         if id == classwork["workid"]:
@@ -349,42 +355,55 @@ def assignClassWork(id):
                 if body["userid"] == user["userid"]:
                     classwork["answer"].append(body)
      
-    classWorkFile = writeFile(classesWorkFileLocation, classWorkData)
+    writeFile(classesWorkFileLocation, classWorkData)
+    response = {}
+    response["message"] = "Answer sent successfully!"
+    response["body"] = body
 
-    return jsonify(body)
+    return jsonify(response)
 
 @app.route('/classwork/update/<int:id>', methods=["POST"]) #update classork
 def updateClassWork(id):
     body = request.json
 
     #read data classwork
-    classesWorkData = getClassWork().json
+    classesWorkData = readFile(classesWorkFileLocation)
 
     for classWork in classesWorkData:
         if id == classWork["workid"]:
             classWork["question"] = body["question"]
 
     #write data classwork
-    classesWorkFile = writeFile(classesWorkFileLocation, classesWorkData)
+    writeFile(classesWorkFileLocation, classesWorkData)
 
-    return "Update question success!"
+    response = {}
+    response["message"] = "Update question on work id {} success!".format(id)
+    response["data"] = body
+
+    return jsonify(response)
 
 @app.route('/classwork/delete/<int:id>', methods=["DELETE"]) #delete 1 classwork
 def deleteClassWork(id):
+    response = {}
+    response["message"] = "Error. Classwork is already deleted!"
+    response["data"] = []
+
     #read-write data classwork
-    classesWorkData = getClassWork().json
+    classesWorkData = readFile(classesWorkFileLocation)
     
     for classWork in range(len(classesWorkData)):
         if id == classesWorkData[classWork]["workid"]:
+            response["message"] = "Classwork {} deleted successfuly!".format(id)
+            response["data"] = classesWorkData[classWork]
             del classesWorkData[classWork]
             break
-        return "Error. Classwork sudah tidak ada!"
+        # return "Error. Classwork sudah tidak ada!"
 
     #write data classwork
-    classesWorkFile = writeFile(classesWorkFileLocation, classesWorkData)
+    writeFile(classesWorkFileLocation, classesWorkData)
 
     #read data class
-    classesData = classList().json
+    classesData = readFile(classesFileLocation)
 
     for class_ in classesData:
         if id in class_["classwork"]:
@@ -392,9 +411,9 @@ def deleteClassWork(id):
             break
 
     #write data class
-    classesFile = writeFile(classesFileLocation, classesData)
+    writeFile(classesFileLocation, classesData)
 
-    return "Classwork Berhasil Dihapus!"
+    return jsonify(response)
 
 
 @app.route('/joinClass', methods=["POST"]) #join class student

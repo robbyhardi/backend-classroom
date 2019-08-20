@@ -1,1 +1,1 @@
-[{"teachers": [], "classid": 901, "classwork": [], "students": [], "classname": "Javascript OKE"}, {"teachers": [201], "classid": 3, "classwork": [302, 300], "students": [], "classname": "Java"}]
+[{"classid": 901, "classwork": [307], "classname": "Javascript OKE", "teachers": [], "students": [9]}, {"classid": 3, "classwork": [], "classname": "Java", "teachers": [201], "students": []}]
