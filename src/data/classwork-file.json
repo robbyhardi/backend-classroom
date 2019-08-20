@@ -1,1 +1,1 @@
-[{"answer": [{"answer": "Berlin", "userid": 9}], "class": 3, "question": "Apa nama ibukota Jerman?", "workid": 2}]
+[{"question": "Apa nama ibukota Jerman?", "workid": 2, "class": 3, "answer": [{"userid": 9, "answer": "Berlin"}]}]

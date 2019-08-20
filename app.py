@@ -1,11 +1,10 @@
 from flask import Flask, request, json, jsonify
-import os
 
 from src.utils.crypt import encrypt, decrypt
 from src.utils.file import readFile, writeFile
+from src.utils.authorization import encode, decode
 
 app = Flask(__name__)
-
 app.config['JSON_SORT_KEYS'] = False
 
 #============================================variable=============================================================
@@ -62,6 +61,7 @@ def login():
             if body["password"] == decrypt(3, user["password"]):
                 response["message"] = "Login Success, welcome {}".format(user["fullname"])
                 response["data"] = user
+                response["token"] = encode(user["username"])
                 del response["data"]["password"]
             break
 
@@ -138,11 +138,7 @@ def outClass(id):
                     response["data"] = body
                     class_["students"].remove(body["userid"])
                     break
-                # else:
-                #     response["message"] = "User {} already!".format(user["fullname"])
-                #     response["data"] = body
-                #     return jsonify(response)
-    
+               
     writeFile(classesFileLocation, classesData)
 
     for user in usersData: 
@@ -152,9 +148,6 @@ def outClass(id):
                 break
 
     writeFile(usersFileLocation, usersData)
-
-    # response["message"] = "User {} out from the class successfully!".format(user["fullname"])
-    # response["data"] = body
 
     return jsonify(response)
 
@@ -218,28 +211,35 @@ def getClassId(id):
     for classX in classData:
         if id == classX["classid"]:
             classX["students"] = []
+            response["message"] = "Class {} found successfully!".format(id)
+            response["data"] = classX
             for user in userData:
                 if id in user["classes_as_student"]:
                     classX["students"].append(user["fullname"])
-            return jsonify(classX) 
-    return "Class not found"
+            return jsonify(response) 
+    return jsonify(response)
  
 @app.route('/updateClass/<int:id>', methods=["PUT"]) #update 1 class
 def updateClassId(id):
     classesData = classList().json
     body = request.json
 
+    response = {}
+    response["message"] = "Unknown error. No changes"
+    response["data"] = []
+
+
     for class_ in classesData:
         if id == class_["classid"]:
             class_["classname"] = body["classname"]
-            class_["teachers"] = body["teachers"]
-            class_["students"] = body["students"]
-            class_["classwork"] = body["classwork"]
+            response["message"] = "Class update successfully!"
+            response["data"] = body
+            break
     
     #update ke file class
-    classesFile = writeFile(classesFileLocation, classesData)
+    writeFile(classesFileLocation, classesData)
   
-    return "Update Success"
+    return jsonify(response)
 
 @app.route('/deleteClass/<int:id>', methods=['DELETE']) #delete 1 class
 def deleteClass(id):
@@ -278,6 +278,54 @@ def deleteClass(id):
     usersFile = writeFile(usersFileLocation, usersData)
 
     return "Kelas Berhasil Dihapus!"
+
+
+    # response = {}
+    # response["message"] = "Error. Kelas sudah tidak ada!"
+    # response["data"] = []
+
+    #             # response["message"] = "Class {} deleted successfully!".format(class_["classid"])
+    #         # response["data"] = classesData[class_]
+
+    # #read data class
+    # classesData = classList().json
+
+    # # nyari class ada atau tidak
+    # for class_ in range(len(classesData)):
+    #     if id == classesData[class_]["classid"]:
+    #         del classesData[class_]
+    #         break
+    #     # return jsonify(response)
+    #     # return "Kelas sudah tidak ada"
+    
+    # #write data class
+    # writeFile(classesFileLocation, classesData)
+    
+    # #read data classwork
+    # classesWorkData = getClassWork().json
+
+    # # nyari class di classwork
+    # for classWork in range(len(classesWorkData)):
+    #     if id == classesWorkData[classWork]["class"]:
+    #         del classesWorkData[classWork]
+    #         break
+
+    # #write data classWork
+    # writeFile(classesWorkFileLocation, classesWorkData)
+
+    # #read data user
+    # usersData = getUser().json
+
+    # # nyari class di user
+    # for user in usersData:
+    #     if id in user["classes_as_student"]:
+    #         user["classes_as_student"].remove(id)
+    #         break
+
+    # #write data users
+    # usersFile = writeFile(usersFileLocation, usersData)
+
+    # return jsonify(response)
 
 @app.route('/classwork/create', methods=["POST"]) #create classwork
 def createClassWork():
