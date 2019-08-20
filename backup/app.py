@@ -1,17 +1,23 @@
 from flask import Flask, request, json, jsonify
 import os
 
-from src.utils.crypt import encrypt, decrypt
-from src.utils.file import readFile, writeFile
-
 app = Flask(__name__)
 
-app.config['JSON_SORT_KEYS'] = False
+#=====================function====================================================================================
+def readFile(filePath):
+    thisData = []
+    #kalau file *.json udah ada, di read. kalau file ga ada, return list kosong
+    if os.path.exists(filePath):
+        thisFile = open(filePath, 'r')
+        thisData = json.load(thisFile)
+        thisFile.close()
 
-#============================================variable=============================================================
-usersFileLocation = 'src/data/users-file.json'
-classesFileLocation = 'src/data/classes-file.json'
-classesWorkFileLocation = 'src/data/classwork-file.json'
+    return thisData
+
+def writeFile(filePath, data):
+    thisFile = open(filePath, 'w')
+    thisFile.write(json.dumps(data))
+    thisFile.close()
 
 #=================================================================================================================
 @app.route('/')
@@ -20,85 +26,56 @@ def testConnection():
 
 @app.route('/register', methods=["POST"])
 def register():
-    response = {}
-    response["message"] = "Username sudah ada, ganti username"
-    response["data"] = []
-
     body = request.json
-    userData = readFile(usersFileLocation)
+    userData = readFile('./users-file.json')
       
     for user in userData:
         if body["username"] in user["username"]:
-            return jsonify(response)
-        else:
-            pass
-    
-    body["password"] = encrypt(3, body["password"])
-    
-    response["message"] = "Registration successfully"
-    response["data"] = body
+            return "Username sudah ada, ganti username!"
     
     userData.append(body)
     
     #siapin file buat di write
-    writeFile(usersFileLocation, userData)
+    userFile = writeFile('./users-file.json', userData)
 
-    return jsonify(response)
+    return jsonify(body)
 
 @app.route('/login', methods=["POST"]) #login
 def login():
-    response = {}
-    response["message"] = "Login failed. Username or password is wrong"
-    response["data"] = []
-
     body = request.json
 
     #siapin file buatt di read
-    userData = readFile(usersFileLocation)
+    userData = readFile('./users-file.json')
 
     for user in userData:
 
         if body["username"] == user["username"]:
-            if body["password"] == decrypt(3, user["password"]):
-                response["message"] = "Login Success, welcome {}".format(user["fullname"])
-                response["data"] = user
-                del response["data"]["password"]
-            break
-
-    return jsonify(response)
+            if body["password"] == user["password"]:
+                return "Login Success"
+            else:
+                return "Login Fail. Wrong Password"
+        else:
+            pass
+    return "Username not found" 
 
 @app.route('/user', methods=["GET"]) #get all user
 def getUser():
-    response = {}
-    response["message"] = "Tidak ada data"
-    response["data"] = []
-
     #siapin file buat di read
-    userData = readFile(usersFileLocation)
+    userData = readFile('./users-file.json')
 
-    if userData != []:
-        response["message"] = "Data all user"
-        response["data"] = userData
-
-    return jsonify(response)
+    return jsonify(userData)
 
 @app.route('/user/<int:id>', methods=["GET"]) #get 1 user
 def getUserId(id):
-    response = {}
-    response["message"] = "User not found"
-    response["data"] = []
-
-
     #siapin file buat di read
-    userData = readFile(usersFileLocation)
+    userData = readFile('./users-file.json')
 
     for user in userData:
         if id == user["userid"]:
-            response["message"] = "{} data".format(user["fullname"])
-            response["data"] = user
-            break
-
-    return jsonify(response)
+            return jsonify(user)
+        else:
+            pass
+    return "User not found"
 
 @app.route('/updateUser/<int:id>', methods=["PUT"]) #update 1 user
 def updateUserId(id):
@@ -112,7 +89,7 @@ def updateUserId(id):
             user["password"] = body["password"]
     
     #update ke file users
-    writeFile(usersFileLocation, usersData)
+    userFile = writeFile('./users-file.json', usersData)
   
     return "Update Success"
 
@@ -120,100 +97,65 @@ def updateUserId(id):
 def outClass(id):
     body = request.json
 
-    response = {}
-    response["message"] = "Fail! User is not in the class!"
-    response["data"] = []
+    #kurangin userid ke classes-file
+    classesData = readFile('./classes-file.json')
 
-    #read classes-file
-    classesData = readFile(classesFileLocation)
-
-    #read users-file
-    usersData = readFile(usersFileLocation)
+    #kurangin classid ke users-file
+    usersData = readFile('./users-file.json')
 
     for class_ in classesData:
         if id == class_["classid"]:
             for user in usersData:
                 if body["userid"] in class_["students"]:
-                    response["message"] = "User {} out from the class successfully!".format(body["userid"])
-                    response["data"] = body
                     class_["students"].remove(body["userid"])
                     break
-                # else:
-                #     response["message"] = "User {} already!".format(user["fullname"])
-                #     response["data"] = body
-                #     return jsonify(response)
     
-    writeFile(classesFileLocation, classesData)
+    classesFile = writeFile('./classes-file.json', classesData)
 
     for user in usersData: 
         if body["userid"] == user["userid"]:
             if id in user["classes_as_student"]:
                 user["classes_as_student"].remove(id)
-                break
 
-    writeFile(usersFileLocation, usersData)
+    usersFile = writeFile('./users-file.json', usersData)
 
-    # response["message"] = "User {} out from the class successfully!".format(user["fullname"])
-    # response["data"] = body
-
-    return jsonify(response)
+    return "Success"
 
 @app.route('/classlist', methods=["GET"]) #get all class
 def classList():
-    classData = readFile(classesFileLocation)
+    classData = readFile('./classes-file.json')
     
     return jsonify(classData)
 
 @app.route('/class/create', methods=["POST"]) #create class
 def createClass():
+    #baca file classes
+    classData = readFile('./classes-file.json')
+
     body = request.json
     body["students"] = []
     body["classwork"] = []
 
-    response = {}
-    response["message"] = "Create Class Success"
-    response["data"] = []
+    #tambah ke file classes 
+    classData.append(body)
 
-    #baca file classes
-    classesData = readFile(classesFileLocation)
+    classFile = writeFile('./classes-file.json', classData)
 
-    # check apakah kelas sudah ada
-    classidAlreadyExist = False
-    for class_ in classesData:
-        if class_["classid"] == body["classid"]:
-            response["message"] = "Class ID {} is already exist".format(body["classid"])
-            classidAlreadyExist = True
-            break
-    
-    if not classidAlreadyExist:
-        #tambah ke file classes 
-        classesData.append(body)
-        writeFile(classesFileLocation, classesData)
+    #baca file users
+    usersData = readFile('./users-file.json')
 
-        #baca file users
-        usersData = readFile(usersFileLocation)
-        for user in usersData:
-            if user["userid"] == body["teacher"]:
-                user["classes_as_teacher"].append(body["classid"])
-    
-        #tambah classid ke file users
-        writeFile(usersFileLocation, usersData)
+    #tambah classid ke file users
+    usersFile = writeFile('./users-file.json', usersData)
 
-        response["data"] = body
-
-    return jsonify(response)
+    return jsonify(body)
     
 @app.route('/class/<int:id>', methods=["GET"]) #get 1 class
 def getClassId(id):
-    response = {}
-    response["message"] = "Class with classid {} is not found.".format(id)
-    response["data"] = []
-
     #siapin file classes buat di read
-    classData = readFile(classesFileLocation)
+    classData = readFile('./classes-file.json')
 
     #siapin file users buat di read
-    userData = readFile(usersFileLocation)
+    userData = readFile('./users-file.json')
 
     for classX in classData:
         if id == classX["classid"]:
@@ -237,7 +179,7 @@ def updateClassId(id):
             class_["classwork"] = body["classwork"]
     
     #update ke file class
-    classesFile = writeFile(classesFileLocation, classesData)
+    classesFile = writeFile('./classes-file.json', classesData)
   
     return "Update Success"
 
@@ -253,7 +195,7 @@ def deleteClass(id):
         return "Error. Kelas sudah tidak ada!"
     
     #write data class
-    classesFile = writeFile(classesFileLocation, classesData)
+    classesFile = writeFile('./classes-file.json', classesData)
     
     #read data classwork
     classesWorkData = getClassWork().json
@@ -264,7 +206,7 @@ def deleteClass(id):
             break
 
     #write data classWork
-    classesWorkFile = writeFile(classesWorkFileLocation, classesWorkData)
+    classesWorkFile = writeFile('./classwork-file.json', classesWorkData)
 
     #read data user
     usersData = getUser().json
@@ -275,7 +217,7 @@ def deleteClass(id):
             break
 
     #write data users
-    usersFile = writeFile(usersFileLocation, usersData)
+    usersFile = writeFile('./users-file.json', usersData)
 
     return "Kelas Berhasil Dihapus!"
 
@@ -283,11 +225,11 @@ def deleteClass(id):
 def createClassWork():
     body = request.json
 
-    classWorkData = readFile(classesWorkFileLocation)
+    classWorkData = readFile('./classwork-file.json')
     
     classWorkData.append(body)
 
-    classWorkFile = writeFile(classesWorkFileLocation, classWorkData)
+    classWorkFile = writeFile('./classwork-file.json', classWorkData)
 
     #read data
     classesData = classList().json
@@ -297,21 +239,21 @@ def createClassWork():
             class_["classwork"].append(body["workid"])
 
     #write data
-    classesFile = writeFile(classesFileLocation, classesData)
+    classesFile = writeFile('./classes-file.json', classesData)
 
     return jsonify(body)
 
 @app.route('/classworklist', methods=["GET"]) #get all classwork
 def getClassWork():
     #siapin file buat di read
-    classWorkData = readFile(classesWorkFileLocation)
+    classWorkData = readFile('./classwork-file.json')
     
     return jsonify(classWorkData)
 
 @app.route('/classwork/<int:id>', methods=["GET"]) #get 1 classwork
 def getClassWorkId(id):
     #siapin file buat di read
-    classWorkData = readFile(classesWorkFileLocation)
+    classWorkData = readFile('./classwork-file.json')
 
     for classwork in classWorkData:
         if id == classwork["workid"]:
@@ -336,7 +278,7 @@ def assignClassWork(id):
                 if body["userid"] == user["userid"]:
                     classwork["answer"].append(body)
      
-    classWorkFile = writeFile(classesWorkFileLocation, classWorkData)
+    classWorkFile = writeFile('./classwork-file.json', classWorkData)
 
     return jsonify(body)
 
@@ -352,23 +294,19 @@ def updateClassWork(id):
             classWork["question"] = body["question"]
 
     #write data classwork
-    classesWorkFile = writeFile(classesWorkFileLocation, classesWorkData)
+    classesWorkFile = writeFile('./classwork-file.json', classesWorkData)
 
     return "Update question success!"
 
 @app.route('/classwork/delete/<int:id>', methods=["DELETE"]) #delete 1 classwork
 def deleteClassWork(id):
     #read-write data classwork
-    classesWorkData = getClassWork().json
+    classesWorkData = getClassWorkId(id).json
     
-    for classWork in range(len(classesWorkData)):
-        if id == classesWorkData[classWork]["workid"]:
-            del classesWorkData[classWork]
-            break
-        return "Error. Classwork sudah tidak ada!"
+    del classesWorkData
 
     #write data classwork
-    classesWorkFile = writeFile(classesWorkFileLocation, classesWorkData)
+    classesWorkFile = writeFile('./classwork-file.json', classesWorkData)
 
     #read data class
     classesData = classList().json
@@ -379,7 +317,7 @@ def deleteClassWork(id):
             break
 
     #write data class
-    classesFile = writeFile(classesFileLocation, classesData)
+    classesFile = writeFile('./classes-file.json', classesData)
 
     return "Classwork Berhasil Dihapus!"
 
@@ -389,24 +327,24 @@ def joinClass():
     body = request.json
 
     #nambahin userid ke classes-file
-    classesData = readFile(classesFileLocation)
+    classesData = readFile('./classes-file.json')
 
     for class_ in classesData:
         if body["classid"] == class_["classid"]:
             if (body["userid"] not in class_["students"]) and (body["userid"] not in class_["teachers"]):
                 class_["students"].append(body["userid"])
     
-    classesFile = writeFile(classesFileLocation, classesData)
+    classesFile = writeFile('./classes-file.json', classesData)
 
     #nambahin classid ke users-file
-    usersData = readFile(usersFileLocation)
+    usersData = readFile('./users-file.json')
     
     for user in usersData: 
         if body["userid"] == user["userid"]:
             if (body["classid"] not in user["classes_as_student"]) and (body["classid"] not in user["classes_as_teacher"]):
                 user["classes_as_student"].append(body["classid"])
     
-    usersFile = writeFile(usersFileLocation, usersData)
+    usersFile = writeFile('./users-file.json', usersData)
 
     return "Success"
 
@@ -415,7 +353,7 @@ def joinClassTeacher():
     body = request.json
 
     #nambahin userid ke classes-file
-    classesData = readFile(classesFileLocation)
+    classesData = readFile('./classes-file.json')
 
     for class_ in classesData:
         if body["classid"] == class_["classid"]:
@@ -424,10 +362,10 @@ def joinClassTeacher():
             else:
                 return "Join failed! Anda sudah terdaftar!"
     
-    classesFile = writeFile(classesFileLocation, classesData)
+    classesFile = writeFile('./classes-file.json', classesData)
 
     #nambahin classid ke users-file
-    usersData = readFile(usersFileLocation)
+    usersData = readFile('./users-file.json')
     
     for user in usersData: 
         if body["userid"] == user["userid"]:
@@ -436,7 +374,7 @@ def joinClassTeacher():
             else:
                 return "Join failed! Anda sudah terdaftar!"
     
-    usersFile = writeFile(usersFileLocation, usersData)
+    usersFile = writeFile('./users-file.json', usersData)
 
     return "Success"
 
